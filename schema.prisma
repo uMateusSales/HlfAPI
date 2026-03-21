@@ -1,0 +1,147 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Prisma Schema — Site de Estudos de Gráficos Financeiros
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────────
+// Criado automaticamente no primeiro login via OAuth (Google ou GitHub)
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  username  String   @unique
+  avatarUrl String?
+  bio       String?
+
+  googleId  String?  @unique
+  githubId  String?  @unique
+
+  studies   Study[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// ─── Study ────────────────────────────────────────────────────────────────────
+// Agrupa vários gráficos sobre um mesmo ativo/tema.
+// Ex: "Análise PETR4 — Março 2024"
+
+model Study {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  published   Boolean     @default(false)
+  slug        String      @unique
+
+  ticker      String?     // ex: "PETR4", "BTCUSDT"
+  timeframe   String?     // ex: "1D", "1H", "15min"
+  assetClass  AssetClass?
+
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  charts      Chart[]
+  tags        Tag[]       @relation("StudyTags")
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([published])
+  @@index([ticker])
+  @@map("studies")
+}
+
+// ─── Chart ────────────────────────────────────────────────────────────────────
+// Um gráfico com suas entradas de preço e a análise escrita pelo usuário.
+//
+// Estrutura:
+//   - type:     tipo de visualização do gráfico
+//   - analysis: texto livre que o analista escreve ao lado do gráfico
+//   - points:   as entradas de hora + fechamento (tabela ChartPoint)
+
+model Chart {
+  id       String      @id @default(cuid())
+  title    String
+  type     ChartType   @default(LINE)
+  order    Int         @default(0)
+
+  // Texto de análise escrito pelo analista — exibido ao lado do gráfico.
+  // Suporta markdown para formatação (negrito, listas, etc.)
+  analysis String?     @db.Text
+
+  // Config visual opcional (cores, anotações de suporte/resistência)
+  config   Json        @default("{}")
+
+  studyId  String
+  study    Study       @relation(fields: [studyId], references: [id], onDelete: Cascade)
+
+  // Entradas de dados do gráfico
+  points   ChartPoint[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([studyId])
+  @@map("charts")
+}
+
+// ─── ChartPoint ───────────────────────────────────────────────────────────────
+// Cada linha de dado do gráfico: uma entrada de hora e valor de fechamento.
+//
+// Equivale a uma linha no Excel:
+//   | Hora              | Fechamento |
+//   | 2024-03-01 09:00  | 37.85      |
+//   | 2024-03-01 10:00  | 38.10      |
+
+model ChartPoint {
+  id        String   @id @default(cuid())
+  timestamp DateTime // hora exata da entrada (ex: 2024-03-01T09:00:00)
+  close     Decimal  @db.Decimal(18, 8) // Decimal para precisão financeira
+
+  chartId   String
+  chart     Chart    @relation(fields: [chartId], references: [id], onDelete: Cascade)
+
+  @@index([chartId])
+  @@index([chartId, timestamp]) // acelera buscas por intervalo de tempo
+  @@map("chart_points")
+}
+
+// ─── Tag ──────────────────────────────────────────────────────────────────────
+
+model Tag {
+  id      String  @id @default(cuid())
+  name    String  @unique
+  studies Study[] @relation("StudyTags")
+
+  @@map("tags")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum ChartType {
+  LINE    // Linha — padrão para série de fechamentos
+  AREA    // Área — igual à linha mas com preenchimento abaixo
+  BAR     // Barras — útil para comparar volumes ou variações
+  SCATTER // Dispersão — correlação entre dois ativos
+}
+
+enum AssetClass {
+  STOCK        // Ações
+  CRYPTO       // Criptomoedas
+  FX           // Câmbio (Forex)
+  FIXED_INCOME // Renda fixa
+  COMMODITY    // Commodities
+  INDEX        // Índices (IBOV, S&P500)
+  OTHER
+}
