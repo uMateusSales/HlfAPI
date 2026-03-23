@@ -19,6 +19,12 @@ const notFound = require('./middlewares/notFound')
 const app = express()
 
 // ─── Segurança ────────────────────────────────────────────────────────────────
+// Necessário quando atrás de proxy (Railway, Render, etc.) para express-rate-limit
+// identificar corretamente o IP real via X-Forwarded-For
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1)
+}
+
 app.use(helmet())
 
 app.use(cors({
