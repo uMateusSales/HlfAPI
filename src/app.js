@@ -1,3 +1,6 @@
+// Carregar variáveis de ambiente ANTES de qualquer módulo que use process.env
+require('dotenv').config()
+
 const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
@@ -5,7 +8,6 @@ const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 const cookieParser = require('cookie-parser')
 const passportConfig = require('./config/passport') // registra as estratégias OAuth
-require('dotenv').config()
 
 const authRoutes = require('./routes/auth.routes')
 const studyRoutes = require('./routes/study.routes')

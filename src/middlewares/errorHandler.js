@@ -15,9 +15,11 @@ function errorHandler(err, req, res, next) {
     return res.status(404).json({ error: 'Registro não encontrado.' })
   }
 
-  // Log completo apenas em desenvolvimento
+  // Log completo em desenvolvimento; em produção, log mínimo para debug nos logs da plataforma
   if (process.env.NODE_ENV !== 'production') {
     console.error('❌ Erro:', err)
+  } else {
+    console.error('[500]', err.message || 'Erro interno')
   }
 
   res.status(statusCode).json({
