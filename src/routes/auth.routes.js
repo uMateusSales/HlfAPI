@@ -43,25 +43,7 @@ router.get(
 
 // ─── GitHub ───────────────────────────────────────────────────────────────────
 
-// GET /api/auth/github
-router.get(
-  '/github',
-  passport.authenticate('github', {
-    scope: ['user:email'],
-    session: false,
-  })
-)
-
-// GET /api/auth/github/callback
-router.get(
-  '/github/callback',
-  passport.authenticate('github', {
-    session: false,
-    failureRedirect: `${FRONTEND_URL}/login?error=github_auth_failed`,
-  }),
-  oauthCallback
-)
-
+/
 // ─── Sessão atual ─────────────────────────────────────────────────────────────
 
 // GET /api/auth/me — retorna o usuário logado (lido do JWT)
